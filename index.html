@@ -32,44 +32,68 @@
 </head>
 <body>
 
+  <div id="startbtn" onclick="document.getElementById('startbtn').style.display='none'" 
+  style="position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(247,243,237,0.92);display:flex;align-items:center;
+  justify-content:center;z-index:9999;cursor:pointer;
+  font-family:Georgia,serif;font-size:1.2rem;letter-spacing:0.2em;color:#8a8278;">
+    ✦ &nbsp; klick zum starten
+  </div>
 
+  <!-- SVG für weißen Pfad -->
+  <svg id="pathSvg" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:500;">
+    <path id="pathLine" fill="none" stroke="white" stroke-width="18"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+  </svg>
 
-    <div id="startbtn" onclick="document.getElementById('startbtn').style.display='none'" 
-    style="position:fixed;top:0;left:0;width:100%;height:100%;
-    background:rgba(247,243,237,0.92);display:flex;align-items:center;
-    justify-content:center;z-index:9999;cursor:pointer;
-    font-family:Georgia,serif;font-size:1.2rem;letter-spacing:0.2em;color:#8a8278;">
-      ✦ &nbsp; klick zum starten
-    </div>
+  <!-- Sonne — startet rechts außen -->
+  <img id="sonne" src="bilder/sonne.png"
+       style="position:fixed;top:60px;width:120px;pointer-events:none;z-index:10;"
+  />
 
-  <!-- OHNE Sound -->
+  <!-- Flowers -->
+  <img id="flowers" src="bilder/Flowers1.png"
+       style="position:fixed;top:200px;width:180px;pointer-events:none;z-index:20;"
+  />
+
+  <!-- White Path Bild -->
+  <img id="whitepath" src="bilder/White Path.png"
+       style="position:fixed;bottom:0;left:0;width:100%;pointer-events:none;z-index:15;opacity:0.6;"
+  />
+
+  <!-- Figur -->
   <a class="element" href="#" style="left:200px; top:150px; width:120px;"
     data-sound="sounds/cynthia_encounter.mp3">
     <img src="bilder/trainer115.png" alt=""/>
   </a>
 
-  <!-- MIT Sound — data-sound="pfad/zur/audiodatei.mp3" -->
-  <!--
-  <a class="element" href="#" style="left:400px; top:200px; width:150px;"
-     data-sound="bilder/mein-sound.mp3">
-    <img src="bilder/mein-bild.png" alt=""/>
-  </a>
-  -->
-
   <script>
+    const sonne   = document.getElementById('sonne');
+    const flowers = document.getElementById('flowers');
+
+    // Startpositionen rechts außen
+    let sonneX   = window.innerWidth;
+    let flowersX = window.innerWidth + 100;
+    let pathPoints = [];
+
+    sonne.style.left   = sonneX   + 'px';
+    flowers.style.left = flowersX + 'px';
+
     document.querySelectorAll('.element').forEach(el => {
       let dragging = false, ox = 0, oy = 0, moved = false;
+      let lastX = 0;
 
-      // Sound setup — nur wenn data-sound vorhanden
+      // Sound setup
       let audio = null;
       if (el.dataset.sound) {
         audio = new Audio(el.dataset.sound);
-        audio.loop = true; // läuft durch solange gezogen wird
+        audio.loop = true;
       }
 
       el.addEventListener('mousedown', e => {
         dragging = true;
-        moved = false;
+        moved    = false;
+        lastX    = e.clientX;
         ox = e.clientX - el.offsetLeft;
         oy = e.clientY - el.offsetTop;
         el.style.zIndex = 1000;
@@ -79,10 +103,31 @@
       document.addEventListener('mousemove', e => {
         if (!dragging) return;
         moved = true;
-        el.style.left = (e.clientX - ox) + 'px';
-        el.style.top  = (e.clientY - oy) + 'px';
 
-        // Sound starten sobald man wirklich zieht
+        // Figur bewegen
+        const newLeft = e.clientX - ox;
+        const newTop  = e.clientY - oy;
+        el.style.left = newLeft + 'px';
+        el.style.top  = newTop  + 'px';
+
+        // Wie weit bewegt?
+        const deltaX = e.clientX - lastX;
+        lastX = e.clientX;
+
+        // Sonne langsam (0.3x)
+        sonneX -= deltaX * 0.3;
+        sonne.style.left = sonneX + 'px';
+
+        // Flowers schneller (1.5x)
+        flowersX -= deltaX * 1.5;
+        flowers.style.left = flowersX + 'px';
+
+        // Weißer Pfad zeichnen
+        pathPoints.push({ x: newLeft + 60, y: newTop + 60 });
+        if (pathPoints.length > 80) pathPoints.shift();
+        drawPath();
+
+        // Sound
         if (audio && audio.paused) audio.play();
       });
 
@@ -91,18 +136,42 @@
         dragging = false;
         el.style.zIndex = '';
 
-        // Sound stoppen wenn losgelassen
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
+        // Sound stoppen
+        if (audio) { audio.pause(); audio.currentTime = 0; }
+
+        // Pfad verblassen
+        fadePath();
       });
 
-      // Link nur öffnen wenn nicht gezogen
       el.addEventListener('click', e => {
         if (moved) e.preventDefault();
       });
     });
+
+    // ---- WEISSER PFAD ----
+    function drawPath() {
+      if (pathPoints.length < 2) return;
+      let d = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
+      for (let i = 1; i < pathPoints.length; i++) {
+        d += ` L ${pathPoints[i].x} ${pathPoints[i].y}`;
+      }
+      document.getElementById('pathLine').setAttribute('d', d);
+      document.getElementById('pathLine').style.opacity = '0.7';
+    }
+
+    function fadePath() {
+      const line = document.getElementById('pathLine');
+      let op = 0.7;
+      const fade = setInterval(() => {
+        op -= 0.02;
+        line.style.opacity = op;
+        if (op <= 0) {
+          clearInterval(fade);
+          pathPoints = [];
+          line.setAttribute('d', '');
+        }
+      }, 30);
+    }
   </script>
 
 </body>
