@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sternrieder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 100vw;
+      min-height: 100vh;
+      background-color: #f7f3ed;
+      background-image: url("rosen.png");
+      background-repeat: repeat;
+      background-size: 33vw auto;
+      overflow-x: hidden;
+    }
+
+    /* Jedes Element auf der Seite */
+    .element {
+      position: absolute;
+      cursor: grab;
+      user-select: none;
+    }
+    .element:active { cursor: grabbing; }
+    .element img {
+      display: block;
+      max-width: 100%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HIER kommen später deine Bilder rein -->
+  <!-- Beispiel: -->
+  <!--
+  <a class="element" href="https://..." style="left:100px; top:80px; width:200px;">
+    <img src="bilder/mein-bild.png" alt=""/>
+  </a>
+  -->
+
+  <script>
+    // Macht alle .element Divs verschiebbar
+    document.querySelectorAll('.element').forEach(el => {
+      let dragging = false, ox = 0, oy = 0, moved = false;
+
+      el.addEventListener('mousedown', e => {
+        dragging = true; moved = false;
+        ox = e.clientX - el.offsetLeft;
+        oy = e.clientY - el.offsetTop;
+        el.style.zIndex = 1000;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        moved = true;
+        el.style.left = (e.clientX - ox) + 'px';
+        el.style.top  = (e.clientY - oy) + 'px';
+      });
+
+      document.addEventListener('mouseup', e => {
+        if (dragging && !moved) return; // war ein Klick → Link öffnen
+        dragging = false;
+        el.style.zIndex = '';
+      });
+
+      // Link nur öffnen wenn nicht gezogen wurde
+      el.addEventListener('click', e => {
+        if (moved) e.preventDefault();
+      });
+    });
+  </script>
+</body>
+</html>
