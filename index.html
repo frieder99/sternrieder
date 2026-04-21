@@ -11,13 +11,12 @@
       width: 100vw;
       min-height: 100vh;
       background-color: #f7f3ed;
-      background-image: url("Maori.png");
+      background-image: url("maori.png");
       background-repeat: repeat;
-      background-size: 33vw auto;
+      background-size: 7vw auto;
       overflow-x: hidden;
     }
 
-    /* Jedes Element auf der Seite */
     .element {
       position: absolute;
       cursor: grab;
@@ -32,24 +31,35 @@
   </style>
 </head>
 <body>
-    <a class="element" href="#" style="left:200px; top:150px; width:120px;">
-        <img src="bilder/trainer115.png" alt=""/>
-      </a>
-  <!-- HIER kommen später deine Bilder rein -->
-  <!-- Beispiel: -->
+
+  <!-- OHNE Sound -->
+  <a class="element" href="#" style="left:200px; top:150px; width:120px;">
+        data-sound="sound/cynthia_encounter.mp3"
+    <img src="bilder/trainer115.png" alt=""/>
+  </a>
+
+  <!-- MIT Sound — data-sound="pfad/zur/audiodatei.mp3" -->
   <!--
-  <a class="element" href="https://..." style="left:100px; top:80px; width:200px;">
+  <a class="element" href="#" style="left:400px; top:200px; width:150px;"
+     data-sound="bilder/mein-sound.mp3">
     <img src="bilder/mein-bild.png" alt=""/>
   </a>
   -->
 
   <script>
-    // Macht alle .element Divs verschiebbar
     document.querySelectorAll('.element').forEach(el => {
       let dragging = false, ox = 0, oy = 0, moved = false;
 
+      // Sound setup — nur wenn data-sound vorhanden
+      let audio = null;
+      if (el.dataset.sound) {
+        audio = new Audio(el.dataset.sound);
+        audio.loop = true; // läuft durch solange gezogen wird
+      }
+
       el.addEventListener('mousedown', e => {
-        dragging = true; moved = false;
+        dragging = true;
+        moved = false;
         ox = e.clientX - el.offsetLeft;
         oy = e.clientY - el.offsetTop;
         el.style.zIndex = 1000;
@@ -61,19 +71,29 @@
         moved = true;
         el.style.left = (e.clientX - ox) + 'px';
         el.style.top  = (e.clientY - oy) + 'px';
+
+        // Sound starten sobald man wirklich zieht
+        if (audio && audio.paused) audio.play();
       });
 
-      document.addEventListener('mouseup', e => {
-        if (dragging && !moved) return; // war ein Klick → Link öffnen
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
         dragging = false;
         el.style.zIndex = '';
+
+        // Sound stoppen wenn losgelassen
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
       });
 
-      // Link nur öffnen wenn nicht gezogen wurde
+      // Link nur öffnen wenn nicht gezogen
       el.addEventListener('click', e => {
         if (moved) e.preventDefault();
       });
     });
   </script>
+
 </body>
 </html>
