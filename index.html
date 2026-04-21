@@ -32,58 +32,174 @@
 </head>
 <body>
 
-  <div id="startbtn" onclick="document.getElementById('startbtn').style.display='none'" 
-  style="position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(247,243,237,0.92);display:flex;align-items:center;
-  justify-content:center;z-index:9999;cursor:pointer;
-  font-family:Georgia,serif;font-size:1.2rem;letter-spacing:0.2em;color:#8a8278;">
+  <!-- STARTSCREEN — fixed, über allem, verschwindet nach Klick -->
+  <div id="startbtn"
+    onclick="this.style.display='none'"
+    style="position:fixed;top:0;left:0;width:100%;height:100%;
+    background:#f7f3ed;
+    background-image:url('maori.png');
+    background-repeat:repeat;
+    background-size:7vw auto;
+    display:flex;align-items:center;justify-content:center;
+    z-index:9999;cursor:pointer;
+    font-family:Georgia,serif;font-size:1.2rem;
+    letter-spacing:0.2em;color:#8a8278;">
     ✦ &nbsp; klick zum starten
   </div>
 
-  <!-- SVG für weißen Pfad -->
-  <svg id="pathSvg" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:500;">
-    <path id="pathLine" fill="none" stroke="white" stroke-width="18"
-          stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+  <!-- WELT LAYER — alles was scrollt kommt hier rein -->
+  <div id="welt" style="position:fixed;inset:0;pointer-events:none;z-index:5;">
+
+    <!-- Sonne — startet rechts außen -->
+    <img id="sonne" src="bilder/sonne.png"
+         style="position:absolute;top:60px;width:120px;pointer-events:none;"/>
+
+    <!-- Flowers — mehrere werden per JS gespawnt -->
+    <div id="flowersContainer"></div>
+
+  </div>
+
+  <!-- SVG PFAD — der weiße Weg -->
+  <svg id="pathSvg"
+       style="position:fixed;inset:0;width:100%;height:100%;
+              pointer-events:none;z-index:6;">
+    <path id="pathLine"
+          fill="none"
+          stroke="white"
+          stroke-width="22"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
   </svg>
 
-  <!-- Sonne — startet rechts außen -->
-  <img id="sonne" src="bilder/sonne.png"
-       style="position:fixed;top:60px;width:120px;pointer-events:none;z-index:10;"
-  />
-
-  <!-- Flowers -->
-  <img id="flowers" src="bilder/Flowers1.png"
-       style="position:fixed;top:200px;width:180px;pointer-events:none;z-index:20;"
-  />
-
-  <!-- White Path Bild -->
-  <img id="whitepath" src="bilder/White Path.png"
-       style="position:fixed;bottom:0;left:0;width:100%;pointer-events:none;z-index:15;opacity:0.6;"
-  />
-
-  <!-- Figur -->
-  <a class="element" href="#" style="left:200px; top:150px; width:120px;"
-    data-sound="sounds/cynthia_encounter.mp3">
+  <!-- FIGUR -->
+  <a class="element" href="#"
+     style="left:200px;top:150px;width:120px;z-index:100;"
+     data-sound="sounds/cynthia_encounter.mp3">
     <img src="bilder/trainer115.png" alt=""/>
   </a>
 
   <script>
-    const sonne   = document.getElementById('sonne');
-    const flowers = document.getElementById('flowers');
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const pathMidY = H * 0.7; // Höhe auf der der Weg verläuft
 
-    // Startpositionen rechts außen
-    let sonneX   = window.innerWidth;
-    let flowersX = window.innerWidth + 100;
-    let pathPoints = [];
+    // ---- WEISSER WEG ----
+    // Pfad-Punkte: starten von Mitte nach rechts außen
+    // x-Werte: von W/2 bis W+200
+    let pathOffsetX = 0; // wie weit hat sich die Welt nach links bewegt
 
-    sonne.style.left   = sonneX   + 'px';
-    flowers.style.left = flowersX + 'px';
+    function buildPathD(offset) {
+      // Fixierter rechter Teil: Mitte → rechts (bleibt immer gleich)
+      // Wachsender linker Teil: wächst nach links je mehr offset
+      const points = [];
 
+      // Linker Teil — wächst mit offset
+      const leftEnd = Math.max(-200, W/2 - offset);
+      for (let x = leftEnd; x <= W/2; x += 20) {
+        // leichte Welle für natürlichen Pfad
+        const wave = Math.sin(x * 0.02) * 8;
+        points.push({ x, y: pathMidY + wave });
+      }
+
+      // Rechter Teil — immer da, von Mitte nach rechts außen
+      for (let x = W/2; x <= W + 200; x += 20) {
+        const wave = Math.sin(x * 0.02) * 8;
+        points.push({ x, y: pathMidY + wave });
+      }
+
+      if (points.length < 2) return '';
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        d += ` L ${points[i].x} ${points[i].y}`;
+      }
+      return d;
+    }
+
+    // Pfad sofort beim Laden zeichnen
+    document.getElementById('pathLine').setAttribute('d', buildPathD(0));
+
+    // ---- SONNE ----
+    let sonneX = W + 50; // startet rechts außen
+    document.getElementById('sonne').style.left = sonneX + 'px';
+
+    // ---- FLOWERS ----
+    let flowersList = [];
+    const flowersContainer = document.getElementById('flowersContainer');
+
+    function spawnFlower() {
+      const img = document.createElement('img');
+      img.src = 'bilder/Flowers1.png';
+      const topPos = Math.random() * (H * 0.5) + H * 0.1;
+      const size = 100 + Math.random() * 80;
+      img.style.cssText = `position:absolute;width:${size}px;
+        top:${topPos}px;pointer-events:none;`;
+      const startX = W + 100;
+      img.style.left = startX + 'px';
+      flowersContainer.appendChild(img);
+      flowersList.push({ el: img, x: startX });
+    }
+
+    // Erste Blume sofort spawnen
+    spawnFlower();
+
+    // ---- ANIMATION LOOP ----
+    let holding    = false;
+    let speed      = 0;      // aktuelle Scroll-Geschwindigkeit
+    const maxSpeed = 4;      // maximale Geschwindigkeit
+    const accel    = 0.08;   // wie schnell beschleunigt es
+    const decel    = 0.05;   // wie schnell bremst es ab
+
+    function animate() {
+      if (holding) {
+        // Beschleunigen
+        speed = Math.min(speed + accel, maxSpeed);
+      } else {
+        // Abbremsen
+        speed = Math.max(speed - decel, 0);
+      }
+
+      if (speed > 0) {
+        // Welt nach links scrollen
+        pathOffsetX += speed;
+
+        // Pfad aktualisieren
+        document.getElementById('pathLine')
+                .setAttribute('d', buildPathD(pathOffsetX));
+
+        // Sonne langsam (0.2x)
+        sonneX -= speed * 0.2;
+        document.getElementById('sonne').style.left = sonneX + 'px';
+        // Sonne rechts wieder reinkommen wenn sie links raus ist
+        if (sonneX < -150) sonneX = W + 150;
+
+        // Flowers schneller (1.8x)
+        flowersList.forEach((f, i) => {
+          f.x -= speed * 1.8;
+          f.el.style.left = f.x + 'px';
+
+          // Wenn Blume die Mitte erreicht → neue spawnen
+          if (f.x < W / 2 && !f.spawned) {
+            f.spawned = true;
+            spawnFlower();
+          }
+
+          // Wenn Blume links raus → entfernen
+          if (f.x < -300) {
+            f.el.remove();
+            flowersList.splice(i, 1);
+          }
+        });
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // ---- FIGUR DRAG ----
     document.querySelectorAll('.element').forEach(el => {
       let dragging = false, ox = 0, oy = 0, moved = false;
-      let lastX = 0;
 
-      // Sound setup
       let audio = null;
       if (el.dataset.sound) {
         audio = new Audio(el.dataset.sound);
@@ -93,7 +209,7 @@
       el.addEventListener('mousedown', e => {
         dragging = true;
         moved    = false;
-        lastX    = e.clientX;
+        holding  = true;
         ox = e.clientX - el.offsetLeft;
         oy = e.clientY - el.offsetTop;
         el.style.zIndex = 1000;
@@ -103,75 +219,23 @@
       document.addEventListener('mousemove', e => {
         if (!dragging) return;
         moved = true;
-
-        // Figur bewegen
-        const newLeft = e.clientX - ox;
-        const newTop  = e.clientY - oy;
-        el.style.left = newLeft + 'px';
-        el.style.top  = newTop  + 'px';
-
-        // Wie weit bewegt?
-        const deltaX = e.clientX - lastX;
-        lastX = e.clientX;
-
-        // Sonne langsam (0.3x)
-        sonneX -= deltaX * 0.3;
-        sonne.style.left = sonneX + 'px';
-
-        // Flowers schneller (1.5x)
-        flowersX -= deltaX * 1.5;
-        flowers.style.left = flowersX + 'px';
-
-        // Weißer Pfad zeichnen
-        pathPoints.push({ x: newLeft + 60, y: newTop + 60 });
-        if (pathPoints.length > 80) pathPoints.shift();
-        drawPath();
-
-        // Sound
+        el.style.left = (e.clientX - ox) + 'px';
+        el.style.top  = (e.clientY - oy) + 'px';
         if (audio && audio.paused) audio.play();
       });
 
       document.addEventListener('mouseup', () => {
         if (!dragging) return;
         dragging = false;
+        holding  = false;
         el.style.zIndex = '';
-
-        // Sound stoppen
         if (audio) { audio.pause(); audio.currentTime = 0; }
-
-        // Pfad verblassen
-        fadePath();
       });
 
       el.addEventListener('click', e => {
         if (moved) e.preventDefault();
       });
     });
-
-    // ---- WEISSER PFAD ----
-    function drawPath() {
-      if (pathPoints.length < 2) return;
-      let d = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
-      for (let i = 1; i < pathPoints.length; i++) {
-        d += ` L ${pathPoints[i].x} ${pathPoints[i].y}`;
-      }
-      document.getElementById('pathLine').setAttribute('d', d);
-      document.getElementById('pathLine').style.opacity = '0.7';
-    }
-
-    function fadePath() {
-      const line = document.getElementById('pathLine');
-      let op = 0.7;
-      const fade = setInterval(() => {
-        op -= 0.02;
-        line.style.opacity = op;
-        if (op <= 0) {
-          clearInterval(fade);
-          pathPoints = [];
-          line.setAttribute('d', '');
-        }
-      }, 30);
-    }
   </script>
 
 </body>
